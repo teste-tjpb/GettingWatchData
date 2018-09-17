@@ -12,7 +12,7 @@ import vikas.gettingwatchdata.Service.ForegroundService;
 public class ServiceBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.i(ServiceBroadcastReceiver.class.getSimpleName(), "Service Stops! Oooooooooooooppppssssss!!!!");
+        Log.i(ServiceBroadcastReceiver.class.getSimpleName(), "Service Stops! Oooooooooooooppppssssss!!!! ok");
         context.startService(new Intent(context, ForegroundService.class));;
     }
 }
