@@ -32,7 +32,7 @@ public class Constant {
       public static String STOPFOREGROUND_ACTION = "com.truiton.foregroundservice.action.stopforeground";
    }
    public interface NOTIFICATION_ID {
-      public static int FOREGROUND_SERVICE = 101;
+      public static int FOREGROUND_SERVICE = 12345678;
    }
    public interface SHARED_PREFERENCE_ID {
       public static String SERVICE_COUNT = "SERVICE_COUNT";

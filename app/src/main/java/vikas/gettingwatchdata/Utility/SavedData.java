@@ -60,6 +60,7 @@ public class SavedData {
     }
 
     public static void   setServiceStatus(Boolean status) {
+        UtilityFunctions.showLogErrorStatic("Service Setting Here "+status);
         SharedPreferences.Editor editor = getInstance().edit();
         editor.putBoolean(Constant.SHARED_PREFERENCE_ID.SERVICE_RUNNING,status );
         editor.apply();
@@ -111,5 +112,7 @@ public class SavedData {
         return getInstance().getBoolean(Constant.SHARED_PREFERENCE_ID.CONNECT_STATUS,false);
 
     }
+
+
 
 }

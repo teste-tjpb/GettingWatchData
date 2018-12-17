@@ -43,6 +43,10 @@ public class UtilityFunctions {
         Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show();
     }
 
+    public void showLogDebug(String msg){
+        if(IS_DEBUGGER_ON)
+            Log.d(Tag,msg);
+    }
     public void showLogError(String msg){
         if(IS_DEBUGGER_ON)
         Log.e(Tag,msg);

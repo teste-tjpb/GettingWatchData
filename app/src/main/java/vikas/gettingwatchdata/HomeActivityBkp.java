@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -14,6 +15,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,7 +58,12 @@ public class HomeActivityBkp extends AppCompatActivity
     BluetoothDevice bluetoothDevice;
 
     private DatabaseHelper db;
-    @Override
+
+    private static View view;
+    private final Handler handler = new Handler();
+
+
+   /* @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
@@ -86,7 +93,7 @@ public class HomeActivityBkp extends AppCompatActivity
 
         utilityFunctions.showToast(SavedData.getDeviceId());
         utilityFunctions.showToast(SavedData.getUserNumber());
-    }
+    }*/
 
     private void setclickListener() {
         add_device_button.setOnClickListener(new View.OnClickListener() {

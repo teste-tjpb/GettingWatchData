@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -67,6 +68,7 @@ import static vikas.gettingwatchdata.Constants.Constant.PEDOMETER_ALL;
  */
 
 public class ForegroundService extends Service {
+    private final LocationServiceBinder binder = new LocationServiceBinder();
 
     private UtilityFunctions utilityFunctions;
     public static boolean IS_SERVICE_RUNNING = false;
@@ -123,26 +125,14 @@ public class ForegroundService extends Service {
 
     // Binding service starts here
     // Binder given to clients
-    private final IBinder mBinder = new LocalBinder();
+   // private final IBinder mBinder = new LocalBinder();
 
     // Just For testing purpose you can remove this after testing
     // Random number generator
     private final Random mGenerator = new Random();
 
-    /**
-     * Class used for the client Binder.  Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
-     */
-    public class LocalBinder extends Binder {
-        ForegroundService getService() {
-            // Return this instance of LocalService so clients can call public methods
-            return ForegroundService.this;
-        }
-    }
+
     /** method for clients */
-    public int getRandomNumber() {
-        return mGenerator.nextInt(100);
-    }
     private IConnectListener iConnectListener = new IConnectListener() {
         @Override
         public void onConnectState(int i) {
@@ -416,7 +406,9 @@ public class ForegroundService extends Service {
             e.printStackTrace();
         }
         //utilityFunctions.showToast(jsonArray.toString());
-        utilityFunctions.showLogError("request packet ->  "+jsonReqPacket.toString());
+        utilityFunctions.showLogError("request packet Size ->  "+jsonArray.length());
+        utilityFunctions.showLogDebug("request packet ->  "+jsonReqPacket.toString());
+
         return jsonReqPacket.toString();
     }
     private void startScan(){
@@ -480,7 +472,7 @@ public class ForegroundService extends Service {
         KCTBluetoothManager.getInstance().sendCommand_a2d(BLEBluetoothManager.getInstance().BLE_COMMAND_a2d_synRealData_pack(Constant.HEART_RATE));
         KCTBluetoothManager.getInstance().sendCommand_a2d(BLEBluetoothManager.getInstance().BLE_COMMAND_a2d_synRealData_pack(BLOOD_PRESSURE_OXYGEN));
         //KCTBluetoothManager.getInstance().sendCommand_a2d(BLEBluetoothManager.getInstance().BLE_COMMAND_a2d_getFirmwareData_pack());
-
+       // KCTBluetoothManager.getInstance().sendCommand_a2d(BLEBluetoothManager.getInstance().Blesend);
     }
     private void stopScan(){
         KCTBluetoothManager.getInstance().scanDevice(false);
@@ -489,6 +481,8 @@ public class ForegroundService extends Service {
     public void onCreate() {
         super.onCreate();
         ExceptionHandler.register(this, "http://uvcabs.esy.es/crash_logs_watch/server.php?version=" + UtilityFunctions.getDeviceName()+"-"+Build.VERSION.SDK_INT);
+        startForeground(12345678, getNotification("Service Started"));
+
         utilityFunctions =  new UtilityFunctions(getApplicationContext());
         KCTBluetoothManager.getInstance().registerListener(iConnectListener);
         db = new DatabaseHelper(getApplicationContext());
@@ -514,17 +508,19 @@ public class ForegroundService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(intent == null){
             startScan();
+            SavedData.setServiceStatus(true);
         }else if (intent.getAction().equals(Constant.ACTION.STARTFOREGROUND_ACTION)) {
             utilityFunctions.showLogError( "Received Start Foreground Intent ");
-
-           // showNotification("Service Started "+SavedData.getService_STARTED_COUNT()+" Times");
             utilityFunctions.showLogError("Service Started!");
             startScan();
+            SavedData.setServiceStatus(true);
+
         } else if (intent.getAction().equals(
                 Constant.ACTION.STOPFOREGROUND_ACTION)) {
             utilityFunctions.showLogError("Service STOPFOREGROUND_ACTION!");
             stopForeground(true);
             stopSelf();
+            onDestroy();
         }
         return START_STICKY;
     }
@@ -550,7 +546,18 @@ public class ForegroundService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return mBinder;
+        return binder;
+    }
+
+    private Notification getNotification(String msg) {
+
+        NotificationChannel channel = new NotificationChannel("channel_01", "My Channel", NotificationManager.IMPORTANCE_DEFAULT);
+
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+
+        Notification.Builder builder = new Notification.Builder(getApplicationContext(), "channel_01").setAutoCancel(true);
+        return builder.build();
     }
 
     private void showNotification(String msg) {
@@ -569,8 +576,8 @@ public class ForegroundService extends Service {
 
 
         int notifyID = 1;
-        String CHANNEL_ID = "my_channel_01";// The id of the channel.
-        CharSequence name = "Channel Name";// The user-visible name of the channel.
+        String CHANNEL_ID = "channel_01";// The id of the channel.
+        CharSequence name = "My Channel";// The user-visible name of the channel.
         int importance = NotificationManager.IMPORTANCE_HIGH;
 
         Notification notification=null;
@@ -590,7 +597,7 @@ public class ForegroundService extends Service {
 
 // Issue the notification.
             if(!serviceIsRunningInForeground(ForegroundService.this)) {
-               // mNotificationManager.notify(notifyID, notification);
+                mNotificationManager.notify(notifyID, notification);
             }
         }else {
 // Create a notification and set the notification channel.
@@ -640,5 +647,10 @@ public class ForegroundService extends Service {
         ctx.sendBroadcast(intent);
 
 
+    }
+    public class LocationServiceBinder extends Binder {
+        public ForegroundService getService() {
+            return ForegroundService.this;
+        }
     }
 }

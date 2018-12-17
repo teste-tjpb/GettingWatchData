@@ -4,14 +4,28 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.ViewPager;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -24,14 +38,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.kct.bluetooth.KCTBluetoothManager;
-import com.kct.bluetooth.bean.BluetoothLeDevice;
-import com.kct.bluetooth.callback.IConnectListener;
-import com.kct.command.BLEBluetoothManager;
-import com.kct.command.IReceiveListener;
-import com.kct.command.KCTBluetoothCommand;
+
 import com.nullwire.trace.ExceptionHandler;
 
 
@@ -47,12 +57,10 @@ import vikas.gettingwatchdata.Service.ForegroundService;
 import vikas.gettingwatchdata.Utility.SavedData;
 import vikas.gettingwatchdata.Utility.UtilityFunctions;
 import vikas.gettingwatchdata.database.DatabaseHelper;
+import vikas.gettingwatchdata.fragments.HomeFragment;
 import vikas.gettingwatchdata.modal.WatchData;
 
-import static vikas.gettingwatchdata.Constants.Constant.BLOOD_PRESSURE_OXYGEN;
 import static vikas.gettingwatchdata.Constants.Constant.HEART_RATE_ALL;
-import static vikas.gettingwatchdata.Constants.Constant.HEART_RATE_REAL;
-import static vikas.gettingwatchdata.Constants.Constant.OXYGEN;
 import static vikas.gettingwatchdata.Constants.Constant.PEDOMETER_ALL;
 
 public class HomeActivity extends AppCompatActivity
@@ -61,12 +69,17 @@ public class HomeActivity extends AppCompatActivity
 
     UtilityFunctions utilityFunctions;
     //Buttons
-    Button buttonStartStopService,buttonStopService,getDbData,clearDb;
+    Button buttonStartStopService;
     TextView device_id,text_steps,text_calorie,text_distance,text_connected,text_sync_time;
+    TextView textViewMe,textViewAnalysis,textViewHome,textViewReport,textViewMore;
+    CardView serviceCard;
 
+    FrameLayout container;
 
     private DatabaseHelper db;
-
+    AlarmManager am ;
+    PendingIntent servicePendingIntent ;
+    Intent serviceIntent;
 
     private void reciveMessage() {
         registerReceiver(mMessageReceiver, new IntentFilter("vikas.gettingwatchdata.Service"));
@@ -78,22 +91,21 @@ public class HomeActivity extends AppCompatActivity
 
             // Get extra data included in the Intent
             Log.e("i m in Broadcast recive", "i m in Broadcast recive");
-            text_steps.setText("No Of Steps Covered : \n\n"+SavedData.getStep());
-            text_calorie.setText("Total Calorie Burnt : \n\n"+SavedData.getCalorie());
-            text_distance.setText("Total Distance Covered : \n\n"+SavedData.getDistance());
-            text_connected.setText("Watch Connected Staus \n\n"+SavedData.getConnectStatus());
-            text_sync_time.setText("Last Sync : \n\n"+SavedData.getLastSyncTime());
+           setTextValues();
         }
     };
+    private void setTextValues(){
+        text_steps.setText(SavedData.getStep()+"");
+        text_calorie.setText(SavedData.getCalorie()+"");
+        text_distance.setText(SavedData.getDistance()+"");
+        text_connected.setText("Watch Connected Status \n\n"+SavedData.getConnectStatus());
+        text_sync_time.setText("Last Sync  \n\n"+SavedData.getLastSyncTime());
+    }
     @Override
     protected void onStart() {
         super.onStart();
         updateUI();
-        text_steps.setText("No Of Steps Covered : \n\n"+SavedData.getStep());
-        text_calorie.setText("Total Calorie Burnt : \n\n"+SavedData.getCalorie());
-        text_distance.setText("Total Distance Covered : \n\n"+SavedData.getDistance());
-        text_connected.setText("Watch Connected Staus \n\n"+SavedData.getConnectStatus());
-        text_sync_time.setText("Last Sync : \n\n"+SavedData.getLastSyncTime());
+        setTextValues();
         reciveMessage();
         if(SavedData.isServiceRunning()){
             startMyForegroundService();
@@ -104,72 +116,139 @@ public class HomeActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ExceptionHandler.register(this, "http://uvcabs.esy.es/crash_logs_watch/server.php?version=" + UtilityFunctions.getDeviceName()+"-"+Build.VERSION.SDK_INT);
+
+
         setContentView(R.layout.activity_home);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+       // Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        //setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Here any message will be displayed", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
+
+       // DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        //ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+          //      this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        //drawer.addDrawerListener(toggle);
+        //toggle.syncState();
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         initilizebuttons();
+        initFooter();
+        initFrameLayout();
         setclickListener();
         device_id.setText("Device Id : "+SavedData.getDeviceId());
         //utilityFunctions.showToast(SavedData.getDeviceId());
         //utilityFunctions.showToast(SavedData.getUserNumber());
+
+        // init alarm and intent here
+        Context ctx = getApplicationContext();
+/** this gives us the time for the first trigger.  */
+        am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        serviceIntent = new Intent(ctx, ForegroundService.class);
+        serviceIntent.setAction(Constant.ACTION.STARTFOREGROUND_ACTION);
+// make sure you **don't** use *PendingIntent.getBroadcast*, it wouldn't work
+        servicePendingIntent =
+                PendingIntent.getService(ctx,
+                        ForegroundService.SERVICE_ID, // integer constant used to identify the service
+                        serviceIntent,
+                        PendingIntent.FLAG_CANCEL_CURRENT);
+        //end
+
+        //working with fragments
+
+        settingDefaultFragment(new HomeFragment());
+        //end
     }
 
-    private void getDataFromdb() {
-        List<WatchData> list = db.getAllNotes();
-        //utilityFunctions.showToast(list.get(0).getResponse());
-        JSONObject jsonObject ,jsonReqPacket;
-        JSONArray jsonArray = new JSONArray();
-        String type = "";
-        jsonReqPacket=new JSONObject();
-        try {
-            jsonReqPacket.put("mobile", SavedData.getUserNumber());
-            jsonReqPacket.put("device_id", SavedData.getDeviceId());
+    private void settingDefaultFragment(Fragment destFragment) {
+        // First get FragmentManager object.
+        FragmentManager fragmentManager = getSupportFragmentManager();
 
-            for (int i = 0; i < list.size(); i++) {
-                jsonObject = new JSONObject();
+        // Begin Fragment transaction.
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-                if (list.get(i).getType() == PEDOMETER_ALL)
-                    type = "PEDOMETER";
-                else if(list.get(i).getType() == HEART_RATE_ALL){
-                    utilityFunctions.showLogError("Heart Rate also found");
-                }
+        // Replace the layout holder with the required Fragment object.
+        fragmentTransaction.replace(R.id.container, destFragment);
 
-
-                    jsonObject.put("type", type);
-                    jsonObject.put("response", list.get(i).getResponse());
-                    jsonObject.put("unique_id", list.get(i).getUnique_id());
-                    jsonObject.put("timestamp", list.get(i).getTime_stamp());
-                    jsonArray.put(jsonObject);
-
-            }
-            jsonReqPacket.put("data", jsonArray);
-        }catch (JSONException e) {
-            e.printStackTrace();
-        }
-        utilityFunctions.showToast(jsonArray.toString());
-        utilityFunctions.showLogError(jsonReqPacket.toString());
+        // Commit the Fragment replace action.
+        fragmentTransaction.commit();
     }
+
+    private void initFrameLayout() {
+        container = findViewById(R.id.container);
+    }
+
+    private void initFooter() {
+        textViewMe = findViewById(R.id.textViewMe);
+        textViewAnalysis = findViewById(R.id.textViewAnalysis);
+        textViewHome = findViewById(R.id.textViewHome);
+        textViewReport = findViewById(R.id.textViewReport);
+        textViewMore = findViewById(R.id.textViewMore);
+    }
+    private void changeFooterColor(TextView textView){
+        textViewMe.setTextColor(getResources().getColor(R.color.textColor,null));
+        textViewAnalysis.setTextColor(getResources().getColor(R.color.textColor,null));
+        textViewHome.setTextColor(getResources().getColor(R.color.textColor,null));
+        textViewReport.setTextColor(getResources().getColor(R.color.textColor,null));
+        textViewMore.setTextColor(getResources().getColor(R.color.textColor,null));
+        //setting drawable tint color
+        ColorStateList colorStateList = getResources().getColorStateList(R.color.drawableTintClosed,null);
+        textViewMe.setCompoundDrawableTintList(colorStateList);
+        textViewAnalysis.setCompoundDrawableTintList(colorStateList);
+        textViewHome.setCompoundDrawableTintList(colorStateList);
+        textViewReport.setCompoundDrawableTintList(colorStateList);
+        textViewMore.setCompoundDrawableTintList(colorStateList);
+
+        textView.setTextColor(getResources().getColor(R.color.textColorSelected,null));
+        ColorStateList colorStateListSelected = getResources().getColorStateList(R.color.drawableTintSelected,null);
+
+        textView.setCompoundDrawableTintList(colorStateListSelected);
+    }
+
+
     private void setclickListener() {
-        buttonStartStopService.setOnClickListener(new View.OnClickListener() {
+        textViewMe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView= (TextView) view;
+                changeFooterColor(textView);
+            }
+        });
+
+        textViewAnalysis.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView= (TextView) view;
+                changeFooterColor(textView);
+            }
+        });
+
+        textViewHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView= (TextView) view;
+                changeFooterColor(textView);
+            }
+        });
+
+        textViewReport.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView= (TextView) view;
+                changeFooterColor(textView);
+            }
+        });
+
+        textViewMore.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TextView textView= (TextView) view;
+                changeFooterColor(textView);
+            }
+        });
+
+        serviceCard.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
@@ -181,41 +260,20 @@ public class HomeActivity extends AppCompatActivity
                     startMyForegroundService();
                     SavedData.setServiceStatus(true);
                 }
+            }
+        });
 
 
-
-            }
-        });
-        buttonStopService.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                stopForegroundService();
-            }
-        });
-        getDbData.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                getDataFromdb();
-            }
-        });
-        clearDb.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                clearDataFromDb();
-            }
-        });
     }
 
     private void updateUI() {
         if(SavedData.isServiceRunning())
-            buttonStartStopService.setText("Stop Service");
+            buttonStartStopService.setText(getResources().getString(R.string.button_start));
         else
-            buttonStartStopService.setText("Start Service V5");
+            buttonStartStopService.setText(getResources().getString(R.string.button_start));
     }
 
-    private void clearDataFromDb() {
-        db.deleteAll();
-    }
+
     private void startMyForegroundService() {
 
         BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -233,21 +291,10 @@ public class HomeActivity extends AppCompatActivity
         }
 
 
-        ForegroundService.IS_SERVICE_RUNNING = true;
-
-        Context ctx = getApplicationContext();
-/** this gives us the time for the first trigger.  */
         Calendar cal = Calendar.getInstance();
-        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         long interval = 1000 * 60 * 5; // 5 minutes in milliseconds
-        Intent serviceIntent = new Intent(ctx, ForegroundService.class);
-        serviceIntent.setAction(Constant.ACTION.STARTFOREGROUND_ACTION);
-// make sure you **don't** use *PendingIntent.getBroadcast*, it wouldn't work
-        PendingIntent servicePendingIntent =
-                PendingIntent.getService(ctx,
-                        ForegroundService.SERVICE_ID, // integer constant used to identify the service
-                        serviceIntent,
-                        PendingIntent.FLAG_CANCEL_CURRENT);
+
+
         // FLAG to avoid creating a second service if there's already one running
 // there are other options like setInexactRepeating, check the docs
         am.setRepeating(
@@ -257,6 +304,8 @@ public class HomeActivity extends AppCompatActivity
                 servicePendingIntent
         );
         utilityFunctions.showToast("Please Wait While we fetch the status");
+        this.getApplication().bindService(serviceIntent      , serviceConnection, Context.BIND_AUTO_CREATE);
+
         updateUI();
 
     }
@@ -265,44 +314,29 @@ public class HomeActivity extends AppCompatActivity
         service.setAction(Constant.ACTION.STOPFOREGROUND_ACTION);
         ForegroundService.IS_SERVICE_RUNNING = false;
         startService(service);
-        Context ctx = getApplicationContext();
-/** this gives us the time for the first trigger.  */
-
-
-        AlarmManager alarmManager = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
-        Intent serviceIntent = new Intent(ctx, ForegroundService.class);
-        serviceIntent.setAction(Constant.ACTION.STARTFOREGROUND_ACTION);
-        PendingIntent servicePendingIntent =
-                PendingIntent.getService(ctx,
-                        ForegroundService.SERVICE_ID, // integer constant used to identify the service
-                        serviceIntent,
-                        PendingIntent.FLAG_CANCEL_CURRENT);
-        alarmManager.cancel(servicePendingIntent);
+        am.cancel(servicePendingIntent);
+        SavedData.setServiceStatus(false);
         updateUI();
     }
 
 
 
     private void initilizebuttons() {
-
+        serviceCard = findViewById(R.id.serviceCard);
         utilityFunctions = new UtilityFunctions(this);
-        buttonStartStopService = (Button)findViewById(R.id.buttonStartStopService);
-        buttonStopService = (Button)findViewById(R.id.buttonStopService);
-        getDbData= (Button)findViewById(R.id.getDbData);
-
-        text_calorie  = (TextView)findViewById(R.id.text_calorie);
-        text_steps  = (TextView)findViewById(R.id.text_steps);
-        text_distance  = (TextView)findViewById(R.id.text_distance);
-        text_connected  = (TextView)findViewById(R.id.text_connected);
-        text_sync_time = (TextView)findViewById(R.id.text_sync_time);
-        clearDb= (Button)findViewById(R.id.clearDb);
-        device_id = (TextView)findViewById(R.id.device_id);
+        buttonStartStopService = findViewById(R.id.buttonStartStopService);
+        text_calorie  = findViewById(R.id.text_calorie);
+        text_steps  = findViewById(R.id.text_steps);
+        text_distance  = findViewById(R.id.text_distance);
+        text_connected  = findViewById(R.id.text_connected);
+        text_sync_time = findViewById(R.id.text_sync_time);
+        device_id = findViewById(R.id.device_id);
         db = new DatabaseHelper(this);
     }
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
@@ -349,12 +383,34 @@ public class HomeActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+    public ForegroundService foregroundService;
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            String name = className.getClassName();
+
+            if (name.endsWith("ForegroundService")) {
+                foregroundService = ((ForegroundService.LocationServiceBinder) service).getService();
+                utilityFunctions.showToast(" service connected");
+                SavedData.setServiceStatus(true);
+                updateUI();
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            utilityFunctions.showToast(className.getClassName()+" service disconnected");
+            if (className.getClassName().equals("ForegroundService")) {
+                foregroundService = null;
+                SavedData.setServiceStatus(false);
+                updateUI();
+            }
+        }
+    };
 
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         unregisterReceiver(mMessageReceiver);
     }
 

@@ -79,8 +79,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_TYPE, type);
 
         // insert row
-        long id = db.insert(TABLE_NAME, null, values);
-
+        long id;
+        try {
+           id = db.insert(TABLE_NAME, null, values);
+        }catch (Exception e){
+            id = 0;
+        }
         // close db connection
         db.close();
 
