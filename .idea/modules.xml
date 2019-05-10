@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/GettingWatchData.iml" filepath="$PROJECT_DIR$/GettingWatchData.iml" />
       <module fileurl="file://$PROJECT_DIR$/WearHealth/WearHealth.iml" filepath="$PROJECT_DIR$/WearHealth/WearHealth.iml" />
+      <module fileurl="file://$PROJECT_DIR$/kcthelper/kcthelper.iml" filepath="$PROJECT_DIR$/kcthelper/kcthelper.iml" />
     </modules>
   </component>
 </project>

@@ -1,1 +1,1 @@
-include ':WearHealth'
+include ':WearHealth', 'kcthelper'

@@ -9,6 +9,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/WearHealth" />
+            <option value="$PROJECT_DIR$/kcthelper" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
