@@ -10,7 +10,7 @@ import java.util.UUID;
  * description: ${VERSION}
  * revise history：
  */
-public class BleContants {
+public class BleConstants {
 
     public final static byte PROTOCOL_MARK = (byte) 0xBA;
     /**
